@@ -6,8 +6,8 @@ using namespace nodepp;
 
 void onMain() {
 
-    ssl_t ssl ( "ssl/cert.key", "ssl/cert.crt" );
-
+    ssl_t ssl;
+    
     tor_fetch_t args;
     args.timeout = 0; // Disable Fetch timeout
     args.method  = "GET";
