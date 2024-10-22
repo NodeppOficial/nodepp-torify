@@ -42,10 +42,10 @@ namespace nodepp { namespace tor { namespace http {
 
             cli.write( ptr_t<char>({ 0x05, 0x01, 0x00, 0x03, len, 0x00 }) );
             cli.write( dip ); cli.write( ptr_t<char>({ 0x00, prt, 0x00 }) );
-            cli.read();
+            cli.read(); bool b=!gfc->body.empty() || gfc->file.is_available();
 
-            cli.write_header( gfc->method, dir, gfc->version, gfc->headers );
-            cli.write_filestream( gfc->method, gfc->body, gfc->file );
+            cli.write_header( gfc->method, dir, gfc->version, gfc->headers, b );
+            cli.write_filestream( gfc->body, gfc->file, b );
 
             while(( c=cli.read_header() )>0 ){ process::next(); }
             if( c==0 ){ res( cli ); return; } else { 

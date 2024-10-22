@@ -55,10 +55,10 @@ namespace nodepp { namespace tor { namespace https {
             if( sk.ssl->connect() <= 0 ){ 
                 rej(except_t("Error while handshaking TLS"));
                 sk.close(); return; 
-            }
+            }   bool b=!gfc->body.empty() || gfc->file.is_available();
 
-            sk.write_header( gfc->method, dir, gfc->version, gfc->headers );
-            sk.write_filestream( gfc->method, gfc->body, gfc->file );
+            cli.write_header( gfc->method, dir, gfc->version, gfc->headers, b );
+            cli.write_filestream( gfc->body, gfc->file, b );
 
             while(( c=sk.read_header() )>0 ){ process::next(); }
             if( c==0 ){ res( sk ); return; } else { 
