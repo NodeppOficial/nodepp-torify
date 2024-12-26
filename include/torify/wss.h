@@ -25,7 +25,7 @@ namespace nodepp { namespace torify { namespace wss {
     tls_torify_t srv ( [=]( ssocket_t /*unused*/ ){}, ssl, opt ); 
         srv.connect( url::hostname(uri), url::port(uri) );
         srv.onSocket.once([=]( ssocket_t cli ){
-            auto hrv = type::cast<http_t>(cli);
+            auto hrv = type::cast<https_t>(cli);
             if ( !_ws_::client( hrv, uri ) ){ return; }
             
             cli.onDrain.once([=](){ cli.free(); cli.onData.clear(); });
