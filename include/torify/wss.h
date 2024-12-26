@@ -14,14 +14,15 @@
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-#include <nodepp/ws.h>
+#include <nodepp/wss.h>
+#include "https.h"
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
 namespace nodepp { namespace torify { namespace wss {
 
-    tls_t client( const string_t& uri, const ssl_t* ssl, torify_agent_t* opt=nullptr ){
-    tls_t srv ( [=]( ssocket_t /*unused*/ ){}, ssl, opt ); 
+    tls_torify_t client( const string_t& uri, const ssl_t* ssl, torify_agent_t* opt=nullptr ){
+    tls_torify_t srv ( [=]( ssocket_t /*unused*/ ){}, ssl, opt ); 
         srv.connect( url::hostname(uri), url::port(uri) );
         srv.onSocket.once([=]( ssocket_t cli ){
             auto hrv = type::cast<http_t>(cli);
