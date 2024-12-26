@@ -1,21 +1,23 @@
 #include <nodepp/nodepp.h>
-#include <nodepp/url.h>
 #include <torify/http.h>
+#include <nodepp/url.h>
 
 using namespace nodepp;
 
 void onMain() {
-
-    tor_fetch_t args;
+ 
+    torify_fetch_t args;
     args.timeout = 0; // Disable Fetch timeout
+    args.url     = "http://www.google.com/";
+    args.proxy   = "tcp://localhost:9050";
     args.method  = "GET";
-    args.tor     = "tcp://localhost:9050";
-    args.url     = "http://check.torproject.org/";
+
     args.headers = header_t({
-        { "host", url::hostname( args.url ) }
+        { "Host", url::hostname( args.url ) },
+        { "User-Agent", "Torify" }
     });
 
-    tor::http::fetch( args )
+    torify::http::fetch( args )
 
     .then([]( http_t cli ){
         console::log( cli.read() );
