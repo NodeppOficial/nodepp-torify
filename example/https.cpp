@@ -1,6 +1,6 @@
 #include <nodepp/nodepp.h>
 #include <nodepp/url.h>
-#include <tor/https.h>
+#include <torify/https.h>
 
 using namespace nodepp;
 
