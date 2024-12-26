@@ -15,7 +15,7 @@ void onMain() {
     tor_fetch_t args;
     args.timeout = 0; // Disable Fetch timeout
     args.method  = "GET";
-    args.tor     = "tcp://localhost:9050";
+    args.proxy   = "tcp://localhost:9050";
     args.url     = "http://check.torproject.org/";
     args.headers = header_t({
         { "Host", url::hostname( args.url ) }
