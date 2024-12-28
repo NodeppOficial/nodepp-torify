@@ -30,13 +30,13 @@ namespace nodepp { namespace torify { namespace http {
         if( !url::is_valid( gfc->url ) ){ rej(except_t("invalid URL")); return; }
         
         url_t    uri = url::parse( gfc->url );
-        string_t dip = uri.hostname ;
         string_t dir = uri.pathname + uri.search + uri.hash;
+        string_t dip = uri.hostname ; gfc->headers["Host"] = dip;
 
         auto client = tcp_torify_t ([=]( http_t cli ){ 
             cli.set_timeout( gfc->timeout ); int c = 0; cli.write_header( gfc, dir );
 
-            while(( c=cli.read_header() )>0 ){ process::next(); }
+            while(( c=cli.read_header() )>0 ); //{ process::next(); }
             if( c==0 ){ res( cli ); return; } else { 
                 rej(except_t("Could not connect to server"));
                 cli.close(); return; 
