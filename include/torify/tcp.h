@@ -97,7 +97,7 @@ public: tcp_torify_t() noexcept : obj( new NODE() ) {}
             if( self->obj->chck ){ 
                 self->obj->poll.push_write( sk.get_fd() );
                 while( self->obj->poll.get_last_poll()==nullptr )
-                     { self->obj->poll.emit(); coNext; }
+                     { coNext; self->obj->poll.emit(); }
             }
 
             do { int len = (int) host.size();
