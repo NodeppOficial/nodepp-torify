@@ -76,14 +76,23 @@ public: tls_torify_t() noexcept : obj( new NODE() ) {}
     
     /*─······································································─*/
 
-    void connect( const string_t& host, int port, decltype(NODE::func)* fn=nullptr  ) const noexcept {
-        if( obj->state == 1 ){ return; } obj->state = 1; if( obj->ctx.create_client() == -1 )
+    void listen( const string_t& host, int port, decltype(NODE::func) cb ) const {
+         process::error( "servers aren't suported by torify" );
+    }
+
+    void listen( const string_t& host, int port ) const noexcept { 
+         listen( host, port, []( ssocket_t ){} ); 
+    }
+    
+    /*─······································································─*/
+
+    void connect( const string_t& host, int port, decltype(NODE::func) cb  ) const noexcept {
+        if( obj->state == 1 ){ return; } if( obj->ctx.create_client() == -1 )
           { _EERROR(onError,"Error Initializing SSL context"); close(); return; }
         if( dns::lookup(host).empty() )
           { _EERROR(onError,"dns couldn't get ip"); close(); return; }
 
-        ptr_t<decltype( NODE::func )> cb = type::bind( fn );
-        auto self = type::bind( this );
+        auto self = type::bind( this ); obj->state = 1;
 
         ssocket_t sk; 
                   sk.SOCK    = SOCK_STREAM;
@@ -97,18 +106,19 @@ public: tls_torify_t() noexcept : obj( new NODE() ) {}
         sk.ssl->set_hostname( host );
 
         process::task::add([=](){
+            if( self->is_closed() ){ return -1; }
         coStart
 
             while( sk._connect() == -2 ){ coNext; } 
             if   ( sk._connect()  <  0 ){ 
                 _EERROR(self->onError,"Error while connecting TLS"); 
-                self->close(); coEnd; 
+                coEnd; 
             }
 
-            if( self->obj->chck ){ 
-                self->obj->poll.push_write( sk.get_fd() );
-                while( self->obj->poll.get_last_poll()==nullptr )
-                     { coNext; self->obj->poll.emit(); }
+            if( self->obj->chck && self->obj->poll.push_write(sk.get_fd()) ){
+                while( self->obj->poll.emit()==-1 ){ 
+                   if( process::now() > sk.get_send_timeout() )
+                     { coEnd; } coNext; }
             }
 
             do { int len = (int) host.size(); auto sok = (socket_t)sk;
@@ -116,7 +126,7 @@ public: tls_torify_t() noexcept : obj( new NODE() ) {}
                 sok.write( ptr_t<char>({ 0x05, 0x01, 0x00, 0x00 }) );
                 if( sok.read(2)!=ptr_t<char>({ 0x05, 0x00, 0x00 }) ){ 
                     _EERROR(self->onError,"Error while Handshaking Sock5"); 
-                    self->close(); coEnd; 
+                    coEnd; 
                 }
 
                 sok.write( ptr_t<char>({ 0x05, 0x01, 0x00, 0x03,  len, 0x00 }) );
@@ -128,20 +138,20 @@ public: tls_torify_t() noexcept : obj( new NODE() ) {}
             while( sk.ssl->_connect() == -2 ){ coNext; }
             if   ( sk.ssl->_connect() <=  0 ){ 
                 _EERROR(self->onError,"Error while handshaking TLS");
-                self->close(); coEnd; 
-            }
+                coEnd; 
+            }   cb( sk );
             
-            sk.onClose.once([=](){ self->close(); }); sk.onOpen.emit(); 
-            self->onSocket.emit( sk );      self->onOpen.emit(sk); 
-            if( cb != nullptr ){(*cb)(sk);} self->obj->func(sk);
+            sk.onClose.once([=](){ self->close(); }); 
+            self->onSocket.emit(sk); sk.onOpen.emit(); 
+            self->onOpen.emit(sk); self->obj->func(sk);
 
         coStop
         });
 
     }
 
-    void connect( const string_t& host, int port, decltype(NODE::func) cb ) const noexcept { 
-         connect( host, port, &cb ); 
+    void connect( const string_t& host, int port ) const noexcept { 
+         connect( host, port, []( ssocket_t ){} ); 
     }
 
 };

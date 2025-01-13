@@ -67,15 +67,24 @@ public: tcp_torify_t() noexcept : obj( new NODE() ) {}
     /*─······································································─*/
 
     void poll( bool chck ) const noexcept { obj->chck = chck; }
+    
+    /*─······································································─*/
+
+    void listen( const string_t& host, int port, decltype(NODE::func) cb ) const {
+         process::error( "servers aren't suported by torify" );
+    }
+
+    void listen( const string_t& host, int port ) const noexcept { 
+         listen( host, port, []( socket_t ){} ); 
+    }
 
     /*─······································································─*/
 
-    void connect( const string_t& host, int port, decltype(NODE::func)* fn=nullptr ) const noexcept {
-        if( obj->state == 1 ){ return; } obj->state = 1; if( dns::lookup(host).empty() )
+    void connect( const string_t& host, int port, decltype(NODE::func) cb ) const noexcept {
+        if( obj->state == 1 ){ return; } if( dns::lookup(host).empty() )
           { _EERROR(onError,"dns couldn't get ip"); close(); return; }
         
-        ptr_t<decltype( NODE::func )> cb = type::bind( fn );
-        auto self = type::bind( this );
+        auto self = type::bind( this ); obj->state = 1;
 
         socket_t sk;
                  sk.SOCK    = SOCK_STREAM; 
@@ -86,18 +95,19 @@ public: tcp_torify_t() noexcept : obj( new NODE() ) {}
                 ); sk.set_sockopt( self->obj->agent );
 
         process::task::add([=](){
+            if( self->is_closed() ){ return -1; }
         coStart
 
             while( sk._connect() == -2 ){ coNext; } 
             if   ( sk._connect()  <  0 ){ 
                 _EERROR(self->onError,"Error while connecting TCP"); 
-                self->close(); coEnd; 
+                coEnd; 
             }
 
-            if( self->obj->chck ){ 
-                self->obj->poll.push_write( sk.get_fd() );
-                while( self->obj->poll.get_last_poll()==nullptr )
-                     { coNext; self->obj->poll.emit(); }
+            if( self->obj->chck && self->obj->poll.push_write(sk.get_fd()) ){
+                while( self->obj->poll.emit()==-1 ){ 
+                   if( process::now() > sk.get_send_timeout() )
+                     { coEnd; } coNext; }
             }
 
             do { int len = (int) host.size();
@@ -105,26 +115,26 @@ public: tcp_torify_t() noexcept : obj( new NODE() ) {}
                 sk.write( ptr_t<char>({ 0x05, 0x01, 0x00, 0x00 }) );
                 if( sk.read(2)!=ptr_t<char>({ 0x05, 0x00, 0x00 }) ){ 
                     _EERROR(self->onError,"Error while Handshaking Sock5"); 
-                    self->close(); coEnd; 
+                    coEnd; 
                 }
 
                 sk.write( ptr_t<char>({ 0x05, 0x01, 0x00, 0x03, len, 0x00 }) );
                 sk.write( host ); sk.write( ptr_t<char>({ 0x00,port, 0x00 }) );
                 sk.read();
 
-            } while(0);
+            } while(0); cb( sk );
             
-            sk.onClose.once([=](){ self->close(); }); sk.onOpen.emit(); 
-            self->onSocket.emit( sk );      self->onOpen.emit(sk); 
-            if( cb != nullptr ){(*cb)(sk);} self->obj->func(sk);
+            sk.onClose.once([=](){ self->close(); }); 
+            self->onSocket.emit(sk); sk.onOpen.emit(); 
+            self->onOpen.emit(sk); self->obj->func(sk);
             
         coStop
         });
 
     }
 
-    void connect( const string_t& host, int port, decltype(NODE::func) cb ) const noexcept { 
-         connect( host, port, &cb ); 
+    void connect( const string_t& host, int port ) const noexcept { 
+         connect( host, port, [=]( socket_t ){} ); 
     }
 
 };
