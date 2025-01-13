@@ -71,7 +71,7 @@ public: tcp_torify_t() noexcept : obj( new NODE() ) {}
     /*─······································································─*/
 
     void listen( const string_t& host, int port, decltype(NODE::func) cb ) const {
-         process::error( "servers aren't suported by torify" );
+         process::error( "servers aren't supported by torify" );
     }
 
     void listen( const string_t& host, int port ) const noexcept { 
@@ -101,11 +101,11 @@ public: tcp_torify_t() noexcept : obj( new NODE() ) {}
             while( sk._connect() == -2 ){ coNext; } 
             if   ( sk._connect()  <  0 ){ 
                 _EERROR(self->onError,"Error while connecting TCP"); 
-                coEnd; 
-            }
+            coEnd; }
 
-            if( self->obj->chck && self->obj->poll.push_write(sk.get_fd()) ){
-                while( self->obj->poll.emit()==-1 ){ 
+            if( self->obj->chck ){
+            if( self->obj->poll.push_write(sk.get_fd())==0 )
+              { sk.free(); } while( self->obj->poll.emit()==0 ){ 
                    if( process::now() > sk.get_send_timeout() )
                      { coEnd; } coNext; }
             }
@@ -115,8 +115,7 @@ public: tcp_torify_t() noexcept : obj( new NODE() ) {}
                 sk.write( ptr_t<char>({ 0x05, 0x01, 0x00, 0x00 }) );
                 if( sk.read(2)!=ptr_t<char>({ 0x05, 0x00, 0x00 }) ){ 
                     _EERROR(self->onError,"Error while Handshaking Sock5"); 
-                    coEnd; 
-                }
+                coEnd; }
 
                 sk.write( ptr_t<char>({ 0x05, 0x01, 0x00, 0x03, len, 0x00 }) );
                 sk.write( host ); sk.write( ptr_t<char>({ 0x00,port, 0x00 }) );
