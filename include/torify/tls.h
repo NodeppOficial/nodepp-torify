@@ -39,7 +39,6 @@ protected:
 
     struct NODE {
         int                        state = 0;
-        bool                       chck  = 1;
         torify_agent_t             agent;
         ssl_t                      ctx  ; 
         poll_t                     poll ;
@@ -69,10 +68,6 @@ public: tls_torify_t() noexcept : obj( new NODE() ) {}
     void     close() const noexcept { if( obj->state<=0 ){ return; } obj->state=-1; onClose.emit(); }
 
     bool is_closed() const noexcept { return obj == nullptr ? 1 : obj->state <= 0; }
-    
-    /*─······································································─*/
-
-    void poll( bool chck ) const noexcept { obj->chck = chck; }
     
     /*─······································································─*/
 
@@ -114,12 +109,10 @@ public: tls_torify_t() noexcept : obj( new NODE() ) {}
                 _EERROR(self->onError,"Error while connecting TLS"); 
             coEnd; }
 
-            if( self->obj->chck ){
             if( self->obj->poll.push_write(sk.get_fd())==0 )
               { sk.free(); } while( self->obj->poll.emit()==0 ){ 
                    if( process::now() > sk.get_send_timeout() )
                      { coEnd; } coNext; }
-            }
 
             do { int len = (int) host.size(); auto sok = (socket_t)sk;
 

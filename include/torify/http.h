@@ -36,10 +36,10 @@ namespace nodepp { namespace torify { namespace http {
         auto client = tcp_torify_t ([=]( http_t cli ){ 
             cli.set_timeout( gfc->timeout ); int c = 0; cli.write_header( gfc, dir );
 
-            while(( c=cli.read_header() )>0 ){ process::next(); }
-            if( c==0 ){ res( cli ); return; } else { 
+            if( cli.read_header()==0 ){ res( cli ); return; } else { 
                 rej(except_t("Could not connect to server")); 
-            cli.close(); }
+                cli.close(); 
+            }
             
         }, &agn ); agn->proxy = gfc->proxy;
 

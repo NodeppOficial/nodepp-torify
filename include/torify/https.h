@@ -36,12 +36,12 @@ namespace nodepp { namespace torify { namespace https {
         string_t dip = uri.hostname ; gfc->headers["Host"] = dip;
        
         auto client = tls_torify_t ([=]( https_t cli ){ 
-            cli.set_timeout( gfc->timeout ); int c = 0; cli.write_header( gfc, dir );
+            cli.set_timeout( gfc->timeout ); cli.write_header( gfc, dir );
 
-            while(( c=cli.read_header() )>0 ){ process::next(); }
-            if( c==0 ){ res( cli ); return; } else { 
+            if( cli.read_header()==0 ){ res( cli ); return; } else { 
                 rej(except_t("Could not connect to server")); 
-            cli.close(); }
+                cli.close(); 
+            }
             
         }, &ssl, &agn ); agn->proxy = gfc->proxy;
 
